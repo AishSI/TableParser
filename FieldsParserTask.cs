@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace TableParser
 {
@@ -7,8 +9,22 @@ namespace TableParser
 	{
 		public static List<string> ParseLine(string line)
 		{
-			var lastFoundedQuoteIndex = 0;
-			var fields = new List<string>();
+			int lastFoundedQuoteIndex = 0;
+			List<string> fields = new List<string>();
+			SeekQuotes(line, ref lastFoundedQuoteIndex, fields);
+			if (lastFoundedQuoteIndex == 0)
+				fields.AddRange(line.Split(new char[] { ' ' }).Where(x => x != ""));
+			else if (lastFoundedQuoteIndex < line.Length - 1)
+			{
+				var lastToken = line.Substring(lastFoundedQuoteIndex + 1, line.Length - lastFoundedQuoteIndex - 1);
+				if (lastToken != "")
+					fields.Add(lastToken);
+			}
+			return fields;
+		}
+
+		private static void SeekQuotes(string line, ref int lastFoundedQuoteIndex, List<string> fields)
+		{
 			for (var i = 0; i < line.Length; i++)
 			{
 				if (line[i] == '\'' || line[i] == '"')
@@ -18,20 +34,16 @@ namespace TableParser
 					lastFoundedQuoteIndex = token.GetIndexNextToToken();
 				}
 			}
-			if (lastFoundedQuoteIndex == 0)
-				fields.AddRange(line.Split().Where(x => x != ""));
-			if (lastFoundedQuoteIndex < line.Length)
-				fields.Add(line.Substring(lastFoundedQuoteIndex + 1, line.Length - lastFoundedQuoteIndex - 1));
-			return fields;
 		}
 
 		public static Token FieldInQuote(int i, string line, List<string> fields, int lastFoundedQuoteIndex, char quote)
 		{
 			var token = ReadField(line.Substring(lastFoundedQuoteIndex, i - lastFoundedQuoteIndex), lastFoundedQuoteIndex);
 			foreach (var field in token.Value.Split())
-				if (field != "" && field != "\"" && field != "'") fields.Add(field);
+				if (field != "" && field != "\"" && field != "'")
+					fields.Add(field);
 			token = FindingSecondQuote(i, line, quote);
-			fields.Add(token.Value);
+			fields.Add(token.Value.Replace("\\" + quote, quote.ToString()).Replace("\\\\", "\\").Trim());
 			return token;
 		}
 

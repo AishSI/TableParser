@@ -1,9 +1,13 @@
-﻿1 2 3
+﻿tab is	not	fields	separator
+"\\" b
+"a \"c\""
+1 2 3
 a "bcd ef" 'x y'
 "a 'b' 'c' d" 1 2 3 '"1" "2" "3"'
 '"1" "2" "3"' "a 'b' 'c' d" 1 2 3
 1 2 3 '"1" "2" "3"' "a 'b' 'c' d"
 a"b c d e"f
 abc "def g h
-"a \"c\""
 "\\" b
+'\'g\''
+"\"bcd\" a"
