@@ -1,5 +1,7 @@
 ﻿a"b e"f
 1 2 3
+tab is	not	fields	separator
+\slash\_in_simple_field_is_just_slash\
 abc "def g h
 "a \"c\""
 "\\" b
@@ -10,4 +12,3 @@ a "bcd ef" 'x y'
 "\\" b
 '\'g\''
 "\"bcd\" a"
-tab is	not	fields	separator

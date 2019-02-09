@@ -7,73 +7,64 @@ namespace TableParser
 	{
 		public static List<string> ParseLine(string line)
 		{
-			int lastFoundedQuotesIndex = 0;
+			int lastPositionToken = 0;
+			var charQuote = ' ';
 			List<string> fields = new List<string>();
-			SeekQuotes(line, ref lastFoundedQuotesIndex, fields);
+			SeekToken(line, ref lastPositionToken, fields, charQuote);
 			return fields;
 		}
 
-		private static void SeekQuotes(string line, ref int lastFoundedQuotesIndex, List<string> fields)
+		private static void SeekToken(string line, ref int lastPositionToken, List<string> fields, char charQuote)
 		{
 			for (var i = 0; i < line.Length; i++)
 			{
-				if (line[i] == '\'' || line[i] == '"')
+				if ((charQuote == ' ') && (line[i] == ' ' || line[i] == '\'' || line[i] == '"'))
 				{
-					SeekToken(line, i, line[i], ref lastFoundedQuotesIndex, fields);
-					i = lastFoundedQuotesIndex;
+					TokenSimpleField(line, i, ref lastPositionToken, fields, charQuote);
+					charQuote = line[i];
+				}
+				else if (charQuote == '\'' || charQuote == '"')
+				{
+					TokenInQuotes(line, i, ref lastPositionToken, fields, charQuote);
+					charQuote = ' ';
+					i = lastPositionToken;
 				}
 			}
-			LastToken(line, lastFoundedQuotesIndex, fields);
+			if (lastPositionToken != 0 && lastPositionToken < line.Length - 1)
+				lastPositionToken += 1;
+			TokenSimpleField(line, line.Length, ref lastPositionToken, fields, charQuote);
 		}
 
-		public static void SeekToken(string line, int i, char quotes, ref int lastFoundedQuotesIndex, List<string> fields)
+		private static void TokenSimpleField(string line, int i, ref int lastPositionToken,
+			List<string> fields, char charQuote)
 		{
-			TokenSimpleField(line, i, lastFoundedQuotesIndex, fields);
-			TokenInQuotes(line, i, ref lastFoundedQuotesIndex, fields, quotes);
-		}
-
-		private static void TokenSimpleField(string line, int i, int lastFoundedQuotesIndex, List<string> fields)
-		{
-			var token = ReadField(line.Substring(lastFoundedQuotesIndex, i - lastFoundedQuotesIndex), lastFoundedQuotesIndex);
-			fields.AddRange(
-				token.Value
+			var token = ReadField(line.Substring(lastPositionToken, i - lastPositionToken), lastPositionToken);
+			fields.AddRange(token.Value
 				.Split(new char[] { ' ' })
 				.Where(x => x != "" && x != "\"" && x != "'")
 				.ToList());
+			lastPositionToken = token.GetIndexNextToToken();
 		}
 
-		public static void TokenInQuotes(string line, int i, ref int lastFoundedQuotesIndex, List<string> fields, char quotes)
+		public static void TokenInQuotes(string line, int startFieldInQuotes, ref int lastPositionToken,
+			List<string> fields, char charQuote)
 		{
-			var token = FindSecondQuotes(line, i, quotes);
-			fields.Add(token.Value.Replace("\\" + quotes, quotes.ToString()).Replace("\\\\", "\\"));
-			lastFoundedQuotesIndex = token.GetIndexNextToToken();
+			var endFieldInQuotes = FindSecondQuotes(line, startFieldInQuotes, charQuote);
+			var token = ReadField(line.Substring(startFieldInQuotes, endFieldInQuotes - startFieldInQuotes), startFieldInQuotes);
+			fields.Add(token.Value.Replace("\\" + charQuote, charQuote.ToString()).Replace("\\\\", "\\"));
+			lastPositionToken = token.GetIndexNextToToken();
 		}
 
-		private static void LastToken(string line, int lastFoundedQuotesIndex, List<string> fields)
+		public static int FindSecondQuotes(string line, int startFieldInQuotes, char quotes)
 		{
-			if (lastFoundedQuotesIndex == 0)
-				fields.AddRange(line.Split(new char[] { ' ' }).Where(x => x != ""));
-			else if (lastFoundedQuotesIndex < line.Length - 1)
-			{
-				var lastToken = line.Substring(lastFoundedQuotesIndex + 1, line.Length - lastFoundedQuotesIndex - 1).TrimStart();
-				if (lastToken != "")
-					fields.Add(lastToken);
-			}
-		}
-
-		public static Token FindSecondQuotes(string line, int i, char quotes)
-		{
-			var startFieldInQuotes = i + 1;
 			for (var j = startFieldInQuotes; j < line.Length; j++)
 			{
 				if (line[j] == '\\')
 					j++;
 				else if (line[j] == quotes)
-				{
-					return ReadField(line.Substring(startFieldInQuotes, j - i - 1), startFieldInQuotes);
-				}
+					return j;
 			}
-			return ReadField(line.Substring(startFieldInQuotes, line.Length - i - 1), startFieldInQuotes);
+			return line.Length;
 		}
 
 		private static Token ReadField(string line, int startIndex)
